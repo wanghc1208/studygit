@@ -1,0 +1,59 @@
+*** Settings ***
+Suite Setup       快捷登录    ${刘化运_cookie}
+Test Setup
+Test Teardown
+Library           RequestsLibrary
+Library           requests
+Library           Collections
+Resource          公共方法.txt
+Resource          公共变量.txt
+
+*** Test Cases ***
+1019771_获取专辑类型列表
+    ${res}    get_api    /album_api/v1/album/type/list
+    log    ${res['data'][0]}
+    Set Suite Variable    ${type}    ${res['data'][0]}
+
+1019755_获取专辑列表
+    ${res}    get_api    /album_api/v1/album/list?type=${type}&offset=0&limit=10
+    log    ${res['data']['albums'][0]['id']}
+
+1019756_获取精品专辑列表
+    ${res}    get_api    /album_api/v1/album/elite/list?type=${type}&offset=0&limit=10
+    log    ${res}
+
+1019760_创建专辑
+    ${random}    Evaluate    random.randint(0,9999)    random,string
+    Set Suite Variable    ${name}    高考专辑${random}
+    Set Suite Variable    ${type}    高考模拟${random}
+    ${data}    Set Variable    {"name":"${name}","type":"${type}","is_elite":true,"exampapers":[2583755263,2583820799,2584279551]}
+    ${res}    post_api    /album_api/v1/album    ${data}
+    Should Not Be Empty    ${res['data']['id']}
+    log    ${res['data']['id']}
+    Set Suite Variable    ${albums_id}    ${res['data']['id']}
+
+1019757_获取专辑详情
+    ${res}    get_api    /album_api/v1/album/${albums_id}
+    log    ${res['data']['name']}
+    Should Be Equal    ${name}    ${res['data']['name']}
+
+1019762_编辑专辑
+    ${data}    Set Variable    {"name":"${name}改","type":"${type}","is_elite":true,"exampapers":[2583755263,2583820799,2584279551]}
+    ${res}    put_api    /album_api/v1/album/${albums_id}    ${data}
+    Should Be Equal    ${res['msg']}    OK
+
+1019772_收藏专辑
+    ${dirc}    Create Dictionary    Content-Type=application/json    cookie=${cookie}
+    create session    api    ${test_url}
+    ${data}    POST Request    api    /album_api/v1/album/${albums_id}/collections    headers=${dirc}
+    ${res}    to json    ${data.content}
+    Should Be Equal As Strings    ${res['code']}    0
+
+1019773_获取我收藏的专辑列表
+    ${res}    get_api    /album_api/v1/album/collections/list?offset=0&limit=10&type=
+    Should Be Equal    ${res['msg']}    OK
+
+1019763_删除专辑
+    ${res}    delete_api    /album_api/v1/album/${albums_id}
+    log    ${res}
+    Should Be Equal    ${res['msg']}    OK

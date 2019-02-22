@@ -1,0 +1,77 @@
+*** Settings ***
+Library           RequestsLibrary
+Library           Collections
+Library           requests
+
+*** Keywords ***
+Login_sso
+    [Arguments]    ${user}    ${passwd}
+    ${dirc}    Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${auto}    create list    user    passwd    app    cert_app
+    create session    api    ${test_url}
+    ${data}    Create Dictionary    user=${user}    passwd= ${passwd}    app=TIKU    cert_app=HFS_TEACHER
+    ${res}    Post Request    api    /passport/v1/user/token    data=${data}    headers=${dirc}
+    log    ${res.json()}
+    ${res1}    To Json    ${res.content}
+    log    ${res1}
+    ${token}    get from dictionary    ${res1}    token
+    ${token}    Set suite Variable    ${token}
+    log    ${token}
+
+Login_tiku
+    create session    api    ${test_url}
+    ${class_res}    get Request    api    /curriculum/TeacherMine?token=${token}
+    log    ${class_res.headers}
+    ${cookie}    get from dictionary    ${class_res.headers}    Set-Cookie
+    log    ${cookie}
+    ${cookie}    Set Global Variable    ${cookie}
+
+快捷登录
+    [Arguments]    ${cookie}
+    Comment    create session    api    http://tiku-test.yunxiao.com:8851
+    Comment    ${res}    get Request    api    ${user}
+    Comment    ${cookie1}    get from dictionary    ${res.headers}    Set-Cookie
+    Comment    log    ${cookie1}
+    Set suite Variable    ${cookie}    ${cookie}
+
+GET_API
+    [Arguments]    ${get_url}
+    ${dirc}    Create Dictionary    Content-Type=application/json    cookie=${cookie}    ending=utf-8
+    create session    api    ${test_url}
+    ${data}    get Request    api    ${get_url}    headers=${dirc}
+    ${res}    to json    ${data.content}
+    Should Be Equal As Integers    ${res['code']}    0
+    [Return]    ${res}
+
+POST_API
+    [Arguments]    ${post_url}    ${data}
+    ${dirc}    Create Dictionary    Content-Type=application/json    cookie=${cookie}
+    create session    api    ${test_url}
+    ${data}    POST Request    api    ${post_url}    headers=${dirc}    data=${data}
+    ${res}    to json    ${data.content}
+    ${code}    Get from Dictionary    ${res}    code
+    log    ${code}
+    Should Be Equal As Strings    ${code}    0
+    [Return]    ${res}
+
+PUT_API
+    [Arguments]    ${put_url}    ${data}
+    ${dirc}    Create Dictionary    Content-Type=application/json    cookie=${cookie}
+    create session    api    ${test_url}
+    ${data}    put Request    api    ${put_url}    headers=${dirc}    data=${data}
+    ${res}    to json    ${data.content}
+    ${code}    Get from Dictionary    ${res}    code
+    log    ${code}
+    Should Be Equal As Strings    ${code}    0
+    [Return]    ${res}
+
+DELETE_API
+    [Arguments]    ${delete_url}
+    ${dirc}    Create Dictionary    Content-Type=application/json    cookie=${cookie}
+    create session    api    ${test_url}
+    ${data}    delete Request    api    ${delete_url}    headers=${dirc}
+    ${res}    to json    ${data.content}
+    ${code}    Get from Dictionary    ${res}    code
+    log    ${code}
+    Should Be Equal As Strings    ${code}    0
+    [Return]    ${res}
